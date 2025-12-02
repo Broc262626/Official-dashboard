@@ -1,55 +1,83 @@
-
 import streamlit as st
 import pandas as pd
+import os
+from io import BytesIO
+import streamlit_authenticator as stauth
+import yaml
 
-st.set_page_config(page_title="Camera Repairs Dashboard", layout="wide")
+# ---------------------------
+#  Authentication
+# ---------------------------
 
-st.markdown("<h1 style='color:orange;'>Camera Health Check – Repairs Dashboard</h1>", unsafe_allow_html=True)
+# Sample credentials; replace with your own secure credentials
+credentials = {
+    "usernames": {
+        "admin": {"name": "Admin User", "password": "admin123", "role": "admin"},
+        "viewer": {"name": "Viewer User", "password": "viewer123", "role": "viewer"},
+    }
+}
 
-def login():
-    st.sidebar.title("Login")
-    user = st.sidebar.text_input("Username")
-    pw = st.sidebar.text_input("Password", type="password")
-    if st.sidebar.button("Login"):
-        if user == "admin" and pw == "admin123":
-            return "admin"
-        elif user == "viewer" and pw == "viewer123":
-            return "viewer"
-        else:
-            st.sidebar.error("Invalid login")
-            return None
-    return None
+# Authenticator setup
+authenticator = stauth.Authenticate(
+    credentials,
+    "camera_dashboard_cookie",
+    "camera_dashboard_session",
+    cookie_expiry_days=1
+)
 
-role = login()
-if not role:
-    st.stop()
+name, authentication_status, username = authenticator.login("Login", "main")
 
-df = pd.read_csv("repairs.csv")
+# ---------------------------
+# Initialize CSV
+# ---------------------------
 
-st.subheader("Repairs Table")
+CSV_FILE = "repairs.csv"
+COLUMNS = ["Server", "Depot name", "Fleet name", "Registration", "Issues", "Priority", "Tech comments"]
 
-search = st.text_input("Search registration or issue")
+if not os.path.exists(CSV_FILE):
+    df = pd.DataFrame(columns=COLUMNS)
+    df.to_csv(CSV_FILE, index=False)
 
-tbl = df.copy()
-if search:
-    tbl = tbl[tbl.apply(lambda r: search.lower() in r.astype(str).str.lower().to_string(), axis=1)]
+# Load data
+@st.cache_data
+def load_data():
+    return pd.read_csv(CSV_FILE)
 
-st.dataframe(tbl, use_container_width=True)
+# Save data
+def save_data(df):
+    df.to_csv(CSV_FILE, index=False)
 
-if role == "admin":
-    st.subheader("Add New Record")
-    with st.form("add"):
-        s = st.text_input("Server")
-        d = st.text_input("Depot")
-        f = st.text_input("Fleet")
-        r = st.text_input("Registration")
-        i = st.text_input("Issue")
-        p = st.selectbox("Priority", ["Low","Medium","High"])
-        c = st.text_area("Tech Comments")
-        if st.form_submit_button("Add"):
-            new = pd.DataFrame([[s,d,f,r,i,p,c]], columns=df.columns)
-            df = pd.concat([df, new], ignore_index=True)
-            df.to_csv("repairs.csv", index=False)
-            st.success("Added record")
+# ---------------------------
+# App
+# ---------------------------
 
-st.markdown("<br><br><i>Theme: Black & Orange</i>", unsafe_allow_html=True)
+if authentication_status:
+    st.set_page_config(page_title="Camera Health Repair Dashboard", layout="wide")
+    
+    st.markdown(
+        """
+        <style>
+        .css-18e3th9 {background-color: #121212;}
+        .css-1d391kg {color: orange;}
+        .stButton>button {background-color: orange; color:black;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    st.title("📸 Camera Health Check Repair Dashboard")
+    st.subheader(f"Welcome {name} ({credentials['usernames'][username]['role'].capitalize()})")
+    
+    df = load_data()
+
+    # ---------------------------
+    # Admin actions
+    # ---------------------------
+    if credentials["usernames"][username]["role"] == "admin":
+        st.markdown("### Add New Vehicle Record")
+        with st.form("add_form"):
+            server = st.text_input("Server")
+            depot = st.text_input("Depot Name")
+            fleet = st.text_input("Fleet Name")
+            reg = st.text_input("Registration")
+            issues =
