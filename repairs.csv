@@ -1,0 +1,4 @@
+Server,Depot name,Fleet name,Registration,Issues,Priority,Tech comments
+Server1,Depot A,Fleet X,REG001,Camera offline,High,Checked wiring
+Server2,Depot B,Fleet Y,REG002,Intermittent video,Medium,Reconnected GPS antenna
+Server3,Depot A,Fleet Z,REG003,MDVR missing,High,Awaiting client PO
